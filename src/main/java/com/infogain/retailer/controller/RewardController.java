@@ -1,6 +1,7 @@
 package com.infogain.retailer.controller;
 
 import com.infogain.retailer.dto.ResponseDTO;
+import com.infogain.retailer.model.RewardResponse;
 import com.infogain.retailer.service.RewardServiceI;
 import com.infogain.retailer.util.ResponseUtil;
 import io.swagger.annotations.ApiOperation;
@@ -27,7 +28,7 @@ public class RewardController {
         @ApiOperation(value="Total Rewards By Customer Name")
         @ApiResponses(value = { @ApiResponse(code = 200, message = "OK"), @ApiResponse(code = 400, message = "Bad Request")})
         @GetMapping(value = "/v1/getRewardsDetailsByCustomer",produces = MediaType.APPLICATION_JSON_VALUE)
-        public ResponseDTO getTransactionDetailsByName() {
+        public ResponseDTO<RewardResponse> getTransactionDetailsByName() {
             return responseUtil.createResponseDto("Total Rewards By Customer Name",200,rewardsService.getTransactionDetailsByName());
         }
 

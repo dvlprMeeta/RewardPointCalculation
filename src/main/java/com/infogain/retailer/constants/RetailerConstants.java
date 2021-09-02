@@ -1,7 +1,10 @@
 package com.infogain.retailer.constants;
 
 public class RetailerConstants {
-    public static final int daysInMonths = 30;
-    public static int firstRewardLimit = 50;
-    public static int secondRewardLimit = 100;
+    public static final int DAYS_IN_MONTH = 30;
+    public static final int FIRST_REWARD_LIMIT = 50;
+    public static final int SECOND_REWARD_LIMIT = 100;
+
+    private RetailerConstants() {
+    }
 }

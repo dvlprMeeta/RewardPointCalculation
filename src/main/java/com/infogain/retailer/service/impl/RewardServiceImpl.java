@@ -24,6 +24,7 @@ import java.util.stream.Collectors;
 @Service
 public class RewardServiceImpl implements RewardServiceI {
 
+    private final SimpleDateFormat monthFormat = new SimpleDateFormat("MMMMM");
 
     @Autowired
     RewardTransactionRepository transactionRepository;
@@ -36,9 +37,9 @@ public class RewardServiceImpl implements RewardServiceI {
         List<Customer> findALlCustomer = customerRepository.findAll();
         List<RewardResponse> rewardResponseList = new ArrayList<>();
         findALlCustomer.forEach(customer -> {
-            Timestamp previousMonthTimestamp = getDateBasedOnOffSetDays(RetailerConstants.daysInMonths);
-            Timestamp secondPreviousMonthTimestamp = getDateBasedOnOffSetDays(2*RetailerConstants.daysInMonths);
-            Timestamp thirdPreviousMonthTimestamp = getDateBasedOnOffSetDays(3*RetailerConstants.daysInMonths);
+            Timestamp previousMonthTimestamp = getDateBasedOnOffSetDays(RetailerConstants.DAYS_IN_MONTH);
+            Timestamp secondPreviousMonthTimestamp = getDateBasedOnOffSetDays(2*RetailerConstants.DAYS_IN_MONTH);
+            Timestamp thirdPreviousMonthTimestamp = getDateBasedOnOffSetDays(3*RetailerConstants.DAYS_IN_MONTH);
 
             List<RewardTransaction> previousMonthTransactions = transactionRepository.findAllByCustomerIdAndTransactionDateBetween(customer.getCustomerId(),previousMonthTimestamp, Timestamp.from(Instant.now()));
             List<RewardTransaction> secondPreviousMonthTransactions = transactionRepository
@@ -61,50 +62,51 @@ public class RewardServiceImpl implements RewardServiceI {
             rewardResponseList.add(rewardResponse);
         });
         return rewardResponseList;
-
     }
 
     @Override
     public Set<RewardTransactionResponse> getTotalRewardsByMonth() {
-
         List<Customer> findAllCustomer = customerRepository.findAll();
         Set<RewardTransactionResponse> rewardTransactionResponseList = new HashSet<>();
         findAllCustomer.forEach(customer -> {
             try {
                 List<RewardTransaction> rewardTransaction = transactionRepository.
                         findAllByCustomerId(customer.getCustomerId());
-
                 Map<String,List<RewardTransaction>>  transactionAmountMap = rewardTransaction.stream().
                         collect(Collectors.groupingBy(reward -> timestampToMonth(reward.getTransactionDate())));
-
-                rewardTransaction.forEach(reward ->  {
-                    List<RewardTransaction> rewardTransactions = transactionAmountMap.get(timestampToMonth(reward.getTransactionDate()));
-                    List<RewardTransactionList> rewardTransactionListData = new ArrayList<>();
-                    rewardTransactions.forEach(rewards -> {
-                        RewardTransactionList rewardTransactionList = new RewardTransactionList();
-                        rewardTransactionList.setTransactionDate(rewards.getTransactionDate());
-                        rewardTransactionList.setAmount(rewards.getTransactionAmount());
-                        rewardTransactionList.setRewardPoint(calculateRewards(rewards));
-                        rewardTransactionList.setCustomerName(customer.getCustomerName());
-                        rewardTransactionListData.add(rewardTransactionList);
-                    });
-
-                    RewardTransactionResponse rewardTransactionResponse = new RewardTransactionResponse();
-                    rewardTransactionResponse.setCustomerName(customer.getCustomerName());
-                    rewardTransactionResponse.setNoOfTransaction(rewardTransactions.size());
-                    rewardTransactionResponse.setTotalRewardPoint(getRewardsPerMonth(rewardTransactions));
-                    rewardTransactionResponse.setMonth(timestampToMonth(reward.getTransactionDate()));
-                    rewardTransactionResponse.setTotalAMount(rewardTransactions.
-                            stream().mapToDouble(RewardTransaction::getTransactionAmount).sum());
-                    rewardTransactionResponse.setRewardTransactionListList(rewardTransactionListData);
-                    rewardTransactionResponseList.add(rewardTransactionResponse);
-                });
+                rewardTransaction.forEach(reward ->  constructRewardTransactionResponse(rewardTransactionResponseList, customer, transactionAmountMap, reward));
             } catch (Exception e) {
                 e.printStackTrace();
             }
         });
-
         return rewardTransactionResponseList;
+    }
+
+    private void constructRewardTransactionResponse(Set<RewardTransactionResponse> rewardTransactionResponseList, Customer customer, Map<String, List<RewardTransaction>> transactionAmountMap, RewardTransaction reward) {
+        List<RewardTransaction> rewardTransactions = transactionAmountMap.get(timestampToMonth(reward.getTransactionDate()));
+        List<RewardTransactionList> rewardTransactionListData = new ArrayList<>();
+        rewardTransactions.forEach(rewards -> getRewardTransactionList(customer, rewardTransactionListData, rewards));
+        creeateRewardTransactionResponse(rewardTransactionResponseList, customer, reward, rewardTransactions, rewardTransactionListData);
+    }
+
+    private void creeateRewardTransactionResponse(Set<RewardTransactionResponse> rewardTransactionResponseList, Customer customer, RewardTransaction reward, List<RewardTransaction> rewardTransactions, List<RewardTransactionList> rewardTransactionListData) {
+        RewardTransactionResponse rewardTransactionResponse= RewardTransactionResponse.builder().
+                customerName(customer.getCustomerName()).
+                noOfTransaction(rewardTransactions.size()).
+                totalRewardPoint(getRewardsPerMonth(rewardTransactions)).
+                month(timestampToMonth(reward.getTransactionDate())).
+                totalAMount(rewardTransactions.stream().mapToDouble(RewardTransaction::getTransactionAmount).sum()).
+                rewardTransactionListList(rewardTransactionListData).build();
+        rewardTransactionResponseList.add(rewardTransactionResponse);
+    }
+
+    private void getRewardTransactionList(Customer customer, List<RewardTransactionList> rewardTransactionListData, RewardTransaction rewards) {
+        RewardTransactionList rewardTransactionList = new RewardTransactionList();
+        rewardTransactionList.setTransactionDate(rewards.getTransactionDate());
+        rewardTransactionList.setAmount(rewards.getTransactionAmount());
+        rewardTransactionList.setRewardPoint(calculateRewards(rewards));
+        rewardTransactionList.setCustomerName(customer.getCustomerName());
+        rewardTransactionListData.add(rewardTransactionList);
     }
 
     private Long getRewardsPerMonth(List<RewardTransaction> transactions) {
@@ -112,13 +114,13 @@ public class RewardServiceImpl implements RewardServiceI {
     }
 
     private Long calculateRewards(RewardTransaction t) {
-        if (t.getTransactionAmount() > RetailerConstants.firstRewardLimit && t.getTransactionAmount() <= RetailerConstants.secondRewardLimit) {
-            return Math.round(t.getTransactionAmount() - RetailerConstants.firstRewardLimit);
-        } else if (t.getTransactionAmount() > RetailerConstants.secondRewardLimit) {
-            return Math.round(t.getTransactionAmount() - RetailerConstants.secondRewardLimit) * 2
-                    + (RetailerConstants.secondRewardLimit - RetailerConstants.firstRewardLimit);
+        if (t.getTransactionAmount() > RetailerConstants.FIRST_REWARD_LIMIT && t.getTransactionAmount() <= RetailerConstants.SECOND_REWARD_LIMIT) {
+            return Math.round(t.getTransactionAmount() - RetailerConstants.FIRST_REWARD_LIMIT);
+        } else if (t.getTransactionAmount() > RetailerConstants.SECOND_REWARD_LIMIT) {
+            return Math.round(t.getTransactionAmount() - RetailerConstants.SECOND_REWARD_LIMIT) * 2
+                    + (RetailerConstants.SECOND_REWARD_LIMIT - RetailerConstants.FIRST_REWARD_LIMIT);
         } else
-            return 0l;
+            return 0L;
 
     }
 
@@ -127,14 +129,11 @@ public class RewardServiceImpl implements RewardServiceI {
     }
 
 
-    private static final SimpleDateFormat monthDayformatter = new SimpleDateFormat("MMMMM");
-
-
-    public static String timestampToMonth(Timestamp timestamp) {
+    public String timestampToMonth(Timestamp timestamp) {
         if (timestamp == null) {
             return null;
         } else {
-            return monthDayformatter.format((java.util.Date) timestamp);
+            return monthFormat.format(timestamp);
         }
     }
 }

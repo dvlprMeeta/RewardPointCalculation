@@ -1,7 +1,6 @@
 package com.infogain.retailer.repository;
 
 
-import com.infogain.retailer.entity.Customer;
 import com.infogain.retailer.entity.RewardTransaction;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;

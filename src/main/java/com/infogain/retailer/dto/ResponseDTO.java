@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 @Setter
 @Getter
 @Scope(value="prototype")
-public class ResponseDTO {
+public class ResponseDTO<T> {
 
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private String responseStatus;
@@ -19,6 +19,6 @@ public class ResponseDTO {
     @JsonInclude(JsonInclude.Include.NON_EMPTY)
     private int responseCode;
 
-    private Object object;
+    private T object;
 
 }
